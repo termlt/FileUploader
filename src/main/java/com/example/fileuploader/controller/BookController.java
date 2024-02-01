@@ -17,9 +17,9 @@ import java.io.Reader;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/books")
 public class BookController {
-    BookService bookService;
+    private final BookService bookService;
 
     public BookController(BookService bookService) {
         this.bookService = bookService;
@@ -29,10 +29,11 @@ public class BookController {
     public ResponseEntity<String> handleFileUpload(@RequestParam("file") MultipartFile file) {
         try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             List<Book> books = CsvParser.parseCsvToBooks(reader);
-            bookService.addBook(books);
+            bookService.addBooks(books);
             return new ResponseEntity<>("File uploaded and data saved successfully.", HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error occurred during file upload.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error occurred during file upload. \nError message: "
+                    + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

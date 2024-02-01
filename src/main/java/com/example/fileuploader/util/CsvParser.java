@@ -1,5 +1,6 @@
 package com.example.fileuploader.util;
 
+import com.example.fileuploader.model.Author;
 import com.example.fileuploader.model.Book;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -18,10 +19,14 @@ public class CsvParser {
         for (CSVRecord csvRecord : csvParser) {
             Book book = new Book();
             book.setTitle(csvRecord.get("title"));
-            book.setAuthorName(csvRecord.get("author_name"));
-            book.setAuthorSurname(csvRecord.get("author_surname"));
-            book.setPrice(Integer.parseInt(csvRecord.get("price")));
 
+            Author author = new Author();
+            author.setName(csvRecord.get("authorName"));
+            author.setSurname(csvRecord.get("authorSurname"));
+
+            book.setAuthor(author);
+
+            book.setPrice(Integer.parseInt(csvRecord.get("price")));
             books.add(book);
         }
 

@@ -1,31 +1,50 @@
 package com.example.fileuploader.service;
 
+import com.example.fileuploader.model.Author;
 import com.example.fileuploader.model.Book;
+import com.example.fileuploader.repository.AuthorRepository;
 import com.example.fileuploader.repository.BookRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class BookService {
 
     private static final Logger logger = LoggerFactory.getLogger(BookService.class);
-    BookRepository bookRepository;
+    private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
 
-    public BookService(BookRepository bookRepository) {
+    public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
         this.bookRepository = bookRepository;
+        this.authorRepository = authorRepository;
     }
 
-    public void addBook(List<Book> books) {
+    public Optional<Book> getBookById(UUID id) {
+        return bookRepository.findById(id);
+    }
+
+    public List<Book> getAllBooks() {
+        return bookRepository.findAll();
+    }
+
+    public void addBooks(List<Book> books) throws Exception {
         Set<Book> uniqueBooks = removeDuplicates(books);
 
         for (Book book : uniqueBooks) {
             if (!isDuplicateInDatabase(book)) {
                 if (isValidBook(book)) {
+                    Author author = authorRepository.findByNameAndSurname(
+                            book.getAuthor().getName(), book.getAuthor().getSurname());
+
+                    if (author == null) {
+                        throw new Exception("Author doesn't exist.");
+                    }
+
+                    book.setAuthor(author);
+
                     bookRepository.save(book);
                     logger.info("Book saved: {}", book.getTitle());
                 } else {
@@ -33,6 +52,21 @@ public class BookService {
                 }
             }
         }
+    }
+
+    public boolean deleteBook(UUID id) throws Exception {
+        if (id == null) {
+            throw new Exception("Id can not be empty.");
+        }
+
+        Optional<Book> optionalBook = bookRepository.findById(id);
+
+        if (optionalBook.isPresent()) {
+            bookRepository.deleteById(id);
+            return true;
+        }
+
+        return false;
     }
 
     private Set<Book> removeDuplicates(List<Book> books) {
@@ -52,8 +86,8 @@ public class BookService {
 
     private boolean isValidBook(Book book) {
         boolean isValid =  book.getTitle() != null && !book.getTitle().isEmpty() &&
-                book.getAuthorName() != null && !book.getAuthorName().isEmpty() &&
-                book.getAuthorSurname() != null && !book.getAuthorSurname().isEmpty() &&
+                book.getAuthor().getName() != null && !book.getAuthor().getName().isEmpty() &&
+                book.getAuthor().getSurname() != null && !book.getAuthor().getSurname().isEmpty() &&
                 book.getPrice() > 0;
 
         if (!isValid) {
@@ -64,7 +98,7 @@ public class BookService {
     }
 
     private boolean isDuplicateInDatabase(Book book) {
-        boolean isDuplicate = bookRepository.existsBookByAuthorNameAndTitle(book.getAuthorName(), book.getTitle());
+        boolean isDuplicate = bookRepository.existsBookByAuthorNameAndTitle(book.getAuthor().getName(), book.getTitle());
 
         if (isDuplicate) {
             logger.warn("Duplicate book in the database: {}", book.getTitle());
